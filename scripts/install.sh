@@ -40,6 +40,11 @@ set_env_var_if_empty() {
 set_env_var_if_empty EMAIL_ENCRYPTION_KEY "$(openssl rand -hex 32)"
 set_env_var_if_empty EMAIL_HASH_PEPPER "$(openssl rand -hex 32)"
 
+set -a
+# shellcheck disable=SC1091
+. ./.env
+set +a
+
 log "Ensuring external network npm_network exists"
 docker network inspect npm_network >/dev/null 2>&1 || docker network create npm_network
 
@@ -101,7 +106,10 @@ for _ in $(seq 1 30); do
     "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
     >/dev/null 2>&1; then
     log "Stack is up"
-    echo "  Frontend: http://localhost:5173"
+    echo "  Frontend: http://localhost/"
+    if [ -n "${DOMAIN:-}" ]; then
+      echo "            http://${DOMAIN}/ (once DNS points at this machine)"
+    fi
     echo "  Only the frontend port is published — backend/mongo/redis/mailhog are reachable"
     echo "  from inside the compose network only. Use 'docker compose exec' or 'docker compose logs'."
     exit 0

@@ -4,6 +4,12 @@ services:
       context: ./frontend
       target: runtime
     restart: unless-stopped
+    # Temporary: published directly until nginx-proxy-manager is deployed on
+    # this host and attached to npm_network (see docs/DECISIONS.md ADR-0006).
+    # Revert to unpublished once that's in place — SPEC.md §3 wants no
+    # published ports here, routing done by nginx-proxy-manager instead.
+    ports:
+      - '80:80'
     networks:
       - npm_network
 

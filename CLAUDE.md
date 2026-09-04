@@ -41,15 +41,20 @@ docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp/npm-home -e npm_config_cache
 
 (The `HOME`/`npm_config_cache` env vars matter — without them `npm` fails with `EACCES` trying to write `/.npmrc` as a non-root UID.)
 
-**Full stack:**
+**Full stack — two different compose modes, don't mix them up:**
 
 ```bash
-./scripts/install.sh                                        # idempotent: env, network, deps, mongo replica set, up, health-wait
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build   # what install.sh drives
-docker compose logs -f backend                                # tail one service
+# Dev (hot-reload, mailhog, bind-mounted source):
+./scripts/install.sh                                                          # idempotent: env, network, deps, mongo replica set, up, health-wait
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build  # what install.sh drives
+
+# Prod (real builds — nginx serving the Vite build, node running dist/):
+docker compose -f docker-compose.yml up -d --build
+
+docker compose logs -f backend   # tail one service, either mode
 ```
 
-Dev URLs: only the frontend's port is published to the host — `http://localhost:5173` (`/api/*` and `/health` are proxied through Vite dev server to the backend, see `vite.config.ts`). Backend/mongo/redis/mailhog are reachable only from inside the compose network — use `docker compose exec <service> ...` or `docker compose logs <service>`.
+**This machine runs the prod mode** (`docker-compose.yml` alone, `NODE_ENV=production`, `DOMAIN=portfelika.com` in `.env`) — it's the actual target server, not a dev sandbox. `frontend` currently publishes `80:80` directly as a stopgap (ADR-0006) because there's no nginx-proxy-manager attached to `npm_network` on this host yet; once there is, remove that `ports:` block. Backend/mongo/redis are reachable only from inside the compose network either way — use `docker compose exec <service> ...` / `docker compose logs <service>`. `frontend/nginx.conf` proxies `/api/` and `/health` to `backend:3000` in prod mode (Vite's dev-server proxy only exists in the dev overlay) — don't assume `curl localhost/health` reaching JSON means the SPA fallback route (`location /`) is also correct; they're separate `location` blocks.
 
 **Migrations** (backend, `migrate-mongo`, directory `backend/migrations/`, config `backend/migrate-mongo-config.cjs`): `npm run migrate:up` / `migrate:down` / `migrate:status` / `migrate:create -- <name>`.
 
@@ -59,7 +64,7 @@ Dev URLs: only the frontend's port is published to the host — `http://localhos
 
 ### Stack and topology
 
-Monorepo: `backend/`, `frontend/`, `scripts/`, `docs/`, `design/`. Docker Compose services: `frontend` (nginx:alpine serving a Vite build; Vue 3 + TS, Pinia, vue-i18n, vue-router, Chart.js), `backend` (node:22-alpine, NestJS + Mongoose), `worker` (same image as `backend`, different entrypoint/command — `dist/worker` vs `dist/main` — so crons and heavy recalcs never block the API), `mongo:7` (**single-node replica set, `rs0`** — required for transactions, which atomic multi-document writes need; `scripts/install.sh` runs `rs.initiate()` idempotently), `redis:7` (BullMQ queues, not wired to any processor yet — Stage 0 has no jobs). `docker-compose.yml` is the base (no ports published, everything on the external `npm_network` that nginx-proxy-manager routes into); `docker-compose.dev.yml` layers on `mailhog`, published ports, and bind-mounted hot-reload. `frontend/src/styles/tokens.css` holds the design tokens (color light/dark pairs, typography, spacing, radii, shadows) pulled from `design/prototype.html` — components should only ever reference these custom properties, never raw hex/px.
+Monorepo: `backend/`, `frontend/`, `scripts/`, `docs/`, `design/`. Docker Compose services: `frontend` (nginx:alpine serving a Vite build; Vue 3 + TS, Pinia, vue-i18n, vue-router, Chart.js), `backend` (node:22-alpine, NestJS + Mongoose), `worker` (same image as `backend`, different entrypoint/command — `dist/worker` vs `dist/main` — so crons and heavy recalcs never block the API), `mongo:7` (**single-node replica set, `rs0`** — required for transactions, which atomic multi-document writes need; `scripts/install.sh` runs `rs.initiate()` idempotently), `redis:7` (BullMQ queues, not wired to any processor yet — Stage 0 has no jobs). `docker-compose.yml` is the base — per SPEC.md §3 it should publish no ports at all, routed entirely by an external nginx-proxy-manager on `npm_network`; right now `frontend` is a temporary exception (`80:80`, see ADR-0006) because that reverse proxy isn't deployed on this host yet. `docker-compose.dev.yml` is a separate overlay for local development elsewhere — `mailhog`, bind-mounted hot-reload — not used on this machine. `frontend/src/styles/tokens.css` holds the design tokens (color light/dark pairs, typography, spacing, radii, shadows) pulled from `design/prototype.html` — components should only ever reference these custom properties, never raw hex/px.
 
 ### Data model (MongoDB) — core invariants
 
