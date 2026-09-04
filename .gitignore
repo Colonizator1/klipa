@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+.env
+.npm-cache/
+.npm-home/
+
+.husky/_/
+
+# editors / OS
+.DS_Store
+.vscode/
+.idea/

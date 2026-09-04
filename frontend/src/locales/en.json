@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "Portfolio Tracker"
+  },
+  "nav": {
+    "dashboard": "Dashboard"
+  },
+  "language": {
+    "label": "Language",
+    "ru": "Русский",
+    "en": "English"
+  },
+  "health": {
+    "checking": "Checking server connection…",
+    "ok": "Server is reachable",
+    "error": "Server is unreachable"
+  }
+}
