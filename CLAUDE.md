@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) and Stage 1 (auth, on branch `stage/01-auth` — not yet merged to `main`, pending manual verification) are done — see `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
+`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) and Stage 1 (auth) are done and merged to `main` — see `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
 
 Any deviation from `SPEC.md` gets a short ADR in `docs/DECISIONS.md` (context, decision, consequences) — never silently diverge. If the spec's data format doesn't fit a real need, `SPEC.md` is amended first, then the code.
 
