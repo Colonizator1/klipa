@@ -6,6 +6,8 @@ import { randomUUID } from 'crypto';
 import configuration from './config/configuration';
 import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import type { AppConfig } from './config/configuration';
 
 @Module({
@@ -33,6 +35,8 @@ import type { AppConfig } from './config/configuration';
       }),
     }),
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

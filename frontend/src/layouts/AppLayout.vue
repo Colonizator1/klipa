@@ -1,30 +1,46 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { useUiStore } from '../stores/ui.store';
+import { useAuthStore } from '../stores/auth.store';
 import type { AppLocale } from '../i18n';
 
 const { t } = useI18n();
 const ui = useUiStore();
+const auth = useAuthStore();
+const router = useRouter();
 
 const locales: AppLocale[] = ['ru', 'en'];
+
+async function onLogout(): Promise<void> {
+  await auth.logout();
+  await router.push('/login');
+}
 </script>
 
 <template>
   <div class="app-shell">
     <header class="app-header">
-      <span class="app-title">{{ t('app.title') }}</span>
-      <div class="language-switcher" role="group" :aria-label="t('language.label')">
-        <button
-          v-for="locale in locales"
-          :key="locale"
-          type="button"
-          class="language-option"
-          :class="{ active: ui.locale === locale }"
-          @click="ui.setLocale(locale)"
-        >
-          {{ t(`language.${locale}`) }}
-        </button>
-      </div>
+      <RouterLink to="/" class="app-title">{{ t('app.title') }}</RouterLink>
+      <nav class="app-nav">
+        <template v-if="auth.isAuthenticated">
+          <RouterLink to="/profile" class="nav-link">{{ t('nav.profile') }}</RouterLink>
+          <button type="button" class="nav-link nav-button" @click="onLogout">{{ t('nav.logout') }}</button>
+        </template>
+        <RouterLink v-else to="/login" class="nav-link">{{ t('nav.login') }}</RouterLink>
+        <div class="language-switcher" role="group" :aria-label="t('language.label')">
+          <button
+            v-for="locale in locales"
+            :key="locale"
+            type="button"
+            class="language-option"
+            :class="{ active: ui.locale === locale }"
+            @click="ui.setLocale(locale)"
+          >
+            {{ t(`language.${locale}`) }}
+          </button>
+        </div>
+      </nav>
     </header>
     <main class="app-content">
       <slot />
@@ -54,6 +70,32 @@ const locales: AppLocale[] = ['ru', 'en'];
   font-family: var(--font-serif);
   font-size: var(--fs-lg);
   font-weight: var(--fw-semibold);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.nav-link {
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.nav-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: var(--text);
 }
 
 .language-switcher {

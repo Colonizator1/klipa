@@ -25,3 +25,97 @@ h3 {
   margin: 0;
   font-weight: var(--fw-semibold);
 }
+
+/* Shared auth-screen primitives — login/register/profile/forgot/reset all use these. */
+
+.auth-card {
+  max-width: 360px;
+  margin: var(--space-24) auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-24);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+}
+
+.auth-card label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.auth-card input {
+  font: inherit;
+  font-size: var(--fs-base);
+  padding: var(--space-10) var(--space-12);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.auth-card input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
+}
+
+.auth-card button {
+  font: inherit;
+  font-weight: var(--fw-medium);
+  padding: var(--space-10) var(--space-16);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.auth-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-card .auth-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.auth-card .auth-links a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.form-error {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--negative);
+  color: var(--negative);
+  font-size: var(--fs-sm);
+}
+
+.form-success {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--positive);
+  color: var(--positive);
+  font-size: var(--fs-sm);
+}

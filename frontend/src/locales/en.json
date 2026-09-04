@@ -3,7 +3,10 @@
     "title": "Portfolio Tracker"
   },
   "nav": {
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "login": "Log in",
+    "logout": "Log out"
   },
   "language": {
     "label": "Language",
@@ -14,5 +17,63 @@
     "checking": "Checking server connection…",
     "ok": "Server is reachable",
     "error": "Server is unreachable"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "login": {
+      "title": "Log in",
+      "submit": "Log in",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "No account yet?",
+      "register": "Register"
+    },
+    "register": {
+      "title": "Register",
+      "submit": "Register",
+      "hasAccount": "Already have an account?",
+      "login": "Log in",
+      "successActive": "Done! You can log in now.",
+      "successPending": "We sent a verification email. Check your inbox (or the server log in dev mode)."
+    },
+    "forgotPassword": {
+      "title": "Reset password",
+      "submit": "Send reset link",
+      "sent": "If that email is registered, a reset link has been sent.",
+      "backToLogin": "Back to login"
+    },
+    "resetPassword": {
+      "title": "New password",
+      "submit": "Save password",
+      "success": "Password changed. You can log in with the new one now.",
+      "missingToken": "This link is incomplete — no token found. Request a new reset link."
+    },
+    "verifyEmail": {
+      "title": "Verify email",
+      "success": "Email verified.",
+      "missingToken": "This link is incomplete — no token found.",
+      "checking": "Verifying…"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "locale": "Interface language",
+    "memberSince": "Member since",
+    "emailVerified": "Email verified",
+    "emailNotVerified": "Email not verified"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "EMAIL_ALREADY_REGISTERED": "This email is already registered.",
+    "EMAIL_NOT_VERIFIED": "Email not verified yet. Check your inbox.",
+    "ACCOUNT_BLOCKED": "This account is blocked.",
+    "RATE_LIMITED": "Too many attempts. Try again later.",
+    "INVALID_OR_EXPIRED_TOKEN": "This link is invalid or has expired.",
+    "REFRESH_TOKEN_REUSED": "Session ended for security reasons. Please log in again.",
+    "UNKNOWN": "Something went wrong. Please try again."
   }
 }

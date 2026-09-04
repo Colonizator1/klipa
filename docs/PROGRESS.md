@@ -1,43 +1,70 @@
-## Текущий этап: 0 — Каркас
+## Текущий этап: 1 — Аутентификация без внешней почты
 
-Ветка: main (Stage 0 сделан прямо на main — веток `stage/NN-slug` ещё не заводили; со Stage 1 переходим на них, как требует SPEC.md §12)
+Ветка: `stage/01-auth` (не смёржена в `main` — ждёт ручной проверки пользователем на проде, см. ниже)
 
-### Сделано
+### Сделано (Stage 1)
 
-- [x] Монорепо: `backend/`, `frontend/`, `scripts/`, `docs/`, `design/`
-- [x] `design/prototype.html` — скачан из репозитория прототипа, токены (цвета light/dark, типографика, отступы, радиусы, тени) вытащены в `frontend/src/styles/tokens.css`
-- [x] Backend: NestJS (Nest CLI 11), TypeScript, `/health` (liveness) + `/health/ready` (Mongo + Redis), единый формат ошибок (`AllExceptionsFilter`, `code`/`message`/`details`/`traceId`), pino через `nestjs-pino` с `traceId` на запрос, helmet + CORS allowlist + собственный mongo-sanitize мидлвар (см. ADR-0004) + `ValidationPipe`, префикс `/api/v1` (health вне префикса)
-- [x] `Money`/`Qty` — обёртки над `decimal.js` (`backend/src/common/money/`), Decimal128 на входе/выходе, precision 20 / half-up, сериализация в строку. Юнит-тесты зелёные.
-- [x] `worker` — отдельная точка входа (`backend/src/worker.ts`, тот же образ), пока без BullMQ-процессоров (появятся с начислениями/провайдерами)
-- [x] `local/no-number-money` — общее ESLint-правило (`eslint-rules/no-number-money.cjs`), подключено и в backend, и в frontend
-- [x] Frontend: Vue 3.5 + Vite + TS (Composition API), Pinia, vue-router, vue-i18n (ru/en, ru по умолчанию), базовый layout с переключателем языка, Dashboard-заглушка с живой проверкой `/health`
-- [x] `docker-compose.yml` — mongo как одноузловой rs0 с `hostname: mongo` (ADR-0005); `frontend` временно публикует `80:80` напрямую (ADR-0006 — на этой машине ещё нет nginx-proxy-manager на `npm_network`, пользователь в сессии выбрал не разворачивать его сейчас). `docker-compose.dev.yml` — отдельный dev-оверлей (mailhog, hot-reload через bind-mount) для локальной разработки не на этом хосте; на самом проде используется только `docker-compose.yml`. `DOMAIN=portfelika.com` в `.env`, `CORS_ORIGINS` включает домен, `vite.config.ts` → `server.allowedHosts` (актуально только для dev-оверлея).
-- [x] `frontend/nginx.conf` — `location /api/` и `location /health` проксируют на `backend:3000` через `resolver 127.0.0.11` + переменную (иначе nginx закэширует IP backend-контейнера на весь жизненный цикл воркера — тот же класс бага, что и ADR-0005). Без этого прод-сборка (в отличие от dev, где проксирование делал Vite) отдавала на `/health` HTML-заглушку SPA вместо ответа бэкенда — поймано только реальным прогоном.
-- [x] `scripts/install.sh` — идемпотентный: генерирует `.env`, поднимает сеть, ставит зависимости, инициирует replica set (явный host, ADR-0005), поднимает стек, ждёт `/health`. Актуален для dev-оверлея; на проде стек поднимался вручную через `docker compose -f docker-compose.yml up -d --build` (см. ниже) — `install.sh` не обновлён под прод-режим, см. «В работе».
-- [x] ESLint + Prettier (backend и frontend), husky pre-commit → lint-staged
-- [x] `.github/workflows/ci.yml` — lint + build + test, отдельные job'ы для backend/frontend
-- [x] `docs/PROGRESS.md`, `docs/DECISIONS.md`, `docs/API.md`
-- [x] Стек реально поднят и проверен end-to-end **на проде** (`docker compose -f docker-compose.yml`, `NODE_ENV=production`, прод-образы — nginx отдаёт собранный Vite-билд, backend/worker гоняют `dist/`): все 6 контейнеров `Up`/`healthy`; порты наружу — только `0.0.0.0:80->80` у frontend, backend/mongo/redis/worker недоступны с хоста; `curl http://localhost/` → `200`; `curl -H "Host: portfelika.com" http://localhost/` → `200`; `curl http://localhost/health` → `{"status":"ok"}`; `curl http://localhost/health/ready` → `{"status":"ok","checks":{"mongo":"ok","redis":"ok"}}`; `curl http://localhost/api/v1/nonexistent` → корректный `404` в едином формате ошибок (не HTML-заглушка). Переключение языка в браузере визуально не проверялось (нет доступа к браузеру из сессии) — код-ревью пройден (i18n/Pinia wiring, юнит-тестами не покрыто).
+- [x] `users` (`backend/src/users/schemas/user.schema.ts`): `emailHash`/`emailEnc`/`emailMasked`/`passwordHash`/`role`/`status`/`locale`/`emailVerifiedAt`/`lastLoginAt`/`deletionRequestedAt`, `timestamps: true` → `createdAt`/`updatedAt`. Точно по SPEC.md §4.1.
+- [x] Крипто-примитивы (`backend/src/common/crypto/`): `PasswordService` (argon2id, memoryCost 64 МБ, timeCost 3 — SPEC.md §10), `EmailCryptoService` (AES-256-GCM, реверсивно + `mask()` → "iv**@gmail.com"), `BlindIndexService` + `hashToken()` (HMAC-SHA256/SHA-256 для `emailHash`, `userIdHash`, `tokenHash`). Юнит-тесты на все три, включая «нет plaintext в выводе» и «tamper → throw».
+- [x] `RateLimitService` (`backend/src/common/rate-limit/`) — Redis INCR+EXPIRE, fixed-window. Лимиты по SPEC.md §10: логин 5/мин (IP и отдельно по аккаунту), регистрация 5/час на IP, сброс пароля 3/час (IP и по аккаунту). Юнит-тесты + проверено вживую (curl-цикл поймал `429` ровно там, где ожидалось).
+- [x] Mail-модуль (`backend/src/mail/`) — `MailDriver` интерфейс, `LogMailDriver` (дефолт, консоль) и `SmtpMailDriver` (nodemailer; mailhog в dev-оверлее, реальный relay — Stage 11). `MAIL_DRIVER=log|smtp` в `.env`. Тексты писем на ru/en внутри `MailService`.
+- [x] `auth` (`backend/src/auth/`): `POST /auth/register`, `/verify-email`, `/login`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`. `GET|PATCH /me` (`backend/src/users/me.controller.ts`).
+  - Access-токен — JWT HS256, 15 мин (`JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL`).
+  - Refresh — непрозрачный токен в httpOnly-cookie (`path=/api/v1/auth`, `secure` в проде), 30 дней, **ротация с отзывом всей цепочки при повторном использовании** (`refresh_tokens.familyId`) — реализовано и проверено вживую curl'ом: старый токен после ротации → `REFRESH_TOKEN_REUSED`, и новый токен из той же семьи тоже становится недействителен.
+  - `email_tokens` — `verify_email` (24 ч) и `reset_password` (1 ч), одноразовые (`usedAt`), хранится только `tokenHash`.
+  - `REQUIRE_EMAIL_VERIFICATION=false` по умолчанию (D-16/Stage 1 DoD) — письмо с подтверждением отправляется всегда, но `status` сразу `active`, если флаг выключен; блокировка входа по `EMAIL_NOT_VERIFIED` включается флагом без правок кода.
+  - `forgot-password` не палит существование аккаунта — ответ одинаковый в обоих случаях (проверено curl'ом).
+  - Сброс пароля отзывает все refresh-токены пользователя.
+  - `JwtAuthGuard` + `RolesGuard`/`@Roles()` (`backend/src/auth/guards/`) — роль-гвард пока нигде не навешан (нет admin-эндпоинтов), но готов.
+- [x] `scripts/create-admin.ts` + `scripts/create-admin.sh` — интерактивное создание первого админа через реальный DI-контейнер приложения (не дублирует крипто-логику). **Поймал и исправил реальный баг** с `readline` при пайпленном stdin — см. ADR-0007.
+- [x] Frontend: экраны логина, регистрации, профиля, forgot/reset password, verify-email (`frontend/src/views/`), `stores/auth.store.ts` (access-токен в памяти, автоматический silent-refresh на 401, единый `authFetch`), роутер с `requiresAuth`/`guestOnly` гвардами, локализация ошибок по `code` (`lib/api-error.ts`, `locales/*.json`), общий стиль форм (`styles/base.css`).
+- [x] `.env`/`.env.example` — `JWT_ACCESS_SECRET` (генерируется `install.sh`), `JWT_ACCESS_TTL`, `REFRESH_TOKEN_TTL_DAYS`, `REQUIRE_EMAIL_VERIFICATION`, `MAIL_DRIVER`/`MAIL_FROM`/`SMTP_*`, `FRONTEND_URL`.
+- [x] `env.validation.ts` расширен: `JWT_ACCESS_SECRET` (мин. 32 симв.), `EMAIL_ENCRYPTION_KEY`/`EMAIL_HASH_PEPPER` (строго 64 hex), остальное — с дефолтами.
+- [x] Юнит-тесты backend: 38 зелёных (money, health, mongo-sanitize, crypto×3, rate-limit, **`auth.service.spec.ts`** — ротация/reuse-detection refresh-токенов на fake-моделях, gating по `status`).
+- [x] **Реально задеплоено и вручную проверено на проде** (см. ниже) — весь флоу register → verify-email-лог → login → /me → refresh-ротация → reuse-detection → logout → rate-limit → create-admin, через живой curl против `https://portfelika.com`/`localhost`.
+
+### Реальная проверка на проде (эта сессия)
+
+```
+POST /auth/register           → {"status":"active"}, письмо в логе backend (log-драйвер)
+POST /auth/login               → accessToken (JWT) + Set-Cookie refresh_token (httpOnly, path=/api/v1/auth)
+GET  /me (Bearer)               → расшифрованный email, роль, статус, createdAt
+POST /auth/refresh (cookie)     → новый accessToken + новый refresh-cookie; старый refresh отозван
+POST /auth/refresh (старый)     → 401 REFRESH_TOKEN_REUSED; новый тоже отозван (вся цепочка убита)
+POST /auth/login (неверный пароль) → 401 INVALID_CREDENTIALS
+POST /auth/forgot-password ×2 (существующий/несуществующий email) → идентичный ответ
+6× POST /auth/login подряд      → 429 RATE_LIMITED после 5-го (IP+account лимит 5/мин)
+create-admin.sh (пайпленный ввод) → админ создан, роль admin подтверждена логином
+```
+
+Визуально в браузере (клик по кнопкам, реальная отрисовка форм) не проверялось — нет доступа к браузеру из сессии. Пользователь просил задеплоить `stage/01-auth`, чтобы проверить это самостоятельно.
 
 ### В работе / не начато
 
-- [ ] `deploy.sh`, `create-admin.sh`, `backup.sh`, `restore.sh`, `seed-instruments.sh`, `logs.sh` — сознательно не сделаны в Stage 0, см. `docs/DECISIONS.md` ADR-0003.
-- [ ] `scripts/install.sh` рассчитан на dev-оверлей (`docker-compose.dev.yml`) и не отражает прод-режим, в котором стек реально поднят сейчас (`docker-compose.yml` без dev-оверлея, порт 80 у frontend). Стоит либо развести на `install.sh` (dev) / `deploy.sh` (прод, см. ADR-0003), либо явно параметризовать — не сделано, чтобы не убегать от Stage 0.
-- [ ] nginx-proxy-manager не развёрнут (ADR-0006) — `ports: - '80:80'` у frontend в `docker-compose.yml` нужно будет убрать, когда он появится.
+- [ ] Визуальная/ручная проверка UI пользователем (форма логина/регистрации/профиля, переключение языка, реальные клики) — на это и задеплоено.
+- [ ] `deploy.sh`, `backup.sh`, `restore.sh`, `seed-instruments.sh`, `logs.sh` — по-прежнему не сделаны, см. ADR-0003. `create-admin.sh` сделан в этом Stage.
+- [ ] `scripts/install.sh` всё ещё рассчитан на dev-оверлей, не на прод-режим, в котором стек реально живёт (см. Stage 0 заметки ниже) — не трогали в Stage 1, чтобы не смешивать со Stage 0 остатками.
+- [ ] nginx-proxy-manager не развёрнут (ADR-0006) — по-прежнему временный `ports: - '80:80'` у frontend.
+- [ ] `audit_log` (SPEC.md §4.11, §10 «админские действия пишутся в audit_log») — не заведён, т.к. в Stage 1 ещё нет ни одного admin-эндпоинта, который бы в него писал. `create-admin.sh` — CLI, не HTTP admin-действие, не в счёт.
 
 ### Следующий шаг
 
-Начинать Stage 1 (аутентификация без внешней почты, SPEC.md §12) на ветке `stage/01-auth`.
+Дождаться, пока пользователь проверит `stage/01-auth` вручную на `https://portfelika.com`, и по результату — либо смёржить в `main` и начинать Stage 2 (портфель, кастомные активы, операции, SPEC.md §12) на `stage/02-portfolio`, либо чинить то, что найдётся.
 
-### Заметки и грабли
+### Заметки и грабли (Stage 1)
 
-- Node/npm недоступны на хосте напрямую — использовался `docker run node:22-alpine` с `-u $(id -u):$(id -g)` и `HOME=/tmp/npm-home`, `npm_config_cache=/tmp/npm-cache` (без этого npm падает с EACCES на `/.npmrc`/`/usr/local/etc`, потому что образ по умолчанию рассчитан на root).
-- `mongoose@9` и `@nestjs/config`/`@nestjs/mongoose` — их `dist` собран как чистый ESM, Jest (CommonJS) падает с "Must use import to load ES Module", пока не добавить `transformIgnorePatterns: ["node_modules/(?!@nestjs/)"]` в jest-конфиг `backend/package.json`.
-- `@typescript-eslint/no-unsafe-enum-comparison` не различает "переменная объявлена как plain number" — ловит любое сравнение с членом enum (например `mongoose.ConnectionStates`), даже если один из операндов явно затипизирован как `number`. Обходили сравнением с числовым литералом вместо enum-члена там, где это уместно.
-- `zod@4` несовместим по peer dependency с `@vee-validate/zod@4.15.1` (тот требует `^3.24.0`) — во frontend зафиксирован `zod@^3.24.0`.
-- TypeScript (frontend, `~6.0.2`) считает `baseUrl` в tsconfig deprecated — алиас `@/*` заведён через `paths` без `baseUrl`.
-- `design/prototype.html` изначально был недоступен (репозиторий приватный/404 по прямой ссылке) — пользователь прислал tokenized raw-URL в процессе сессии, файл скачан и токены вытащены оттуда.
-- `express-mongo-sanitize@2.2.0` ломает **вообще все** запросы под Express 5 (`req.query = ...` → `TypeError`, `query` теперь только-геттер) — backend висел и не отвечал на `/health` только из-за этого, ни линт, ни юнит-тесты этого не ловят, только реальный прогон стека. См. ADR-0004.
-- Пересоздание контейнера `mongo` без явного `hostname` меняет self-hostname, на который завязан `rs.initiate()` — реплика-сет ломается тихо (`ping` ещё отвечает, `rs.status()` уже нет), backend виснет внутри `NestFactory.create()` навсегда. См. ADR-0005.
-- Эта сессия работала напрямую на целевом прод-сервере (подтверждено пользователем), не на тестовой машине — домен `portfelika.com` уже готов у пользователя. `npm_network` на этом хосте существует только потому, что его создал `install.sh`; реального nginx-proxy-manager контейнера на нём нет (`docker network inspect npm_network` показывает только контейнеры этого проекта). См. ADR-0006.
-- Прод-сборка фронтенда (nginx, статика) не проксирует `/api`/`/health` сама по себе — это делал только Vite dev-server в dev-режиме. Без явных `location` в `nginx.conf` `/health` тихо отдавал HTML SPA вместо ответа бэкенда (200 OK, но не то тело) — заметно только если реально сверить содержимое ответа, а не только код статуса.
+- **Циклическая зависимость Users↔Auth**: `MeController` нужен `JwtAuthGuard`, а `AuthModule` нужен `UsersService`. Решение — `JwtAuthGuard`/`RolesGuard` живут в отдельном `AuthGuardsModule` (только зависит от `JwtSharedModule`), который импортируют и `UsersModule`, и (транзитивно через `JwtSharedModule`) `AuthModule` — без прямой связи Users→Auth или Auth→Users-guards.
+- **`express-mongo-sanitize`-класс багов повторился на новом месте**: не было — но общий урок закрепился: любая точка, трогающая `req.query` под Express 5, должна мутировать объект in-place, не переприсваивать.
+- **`argon2.hash()`/`@nestjs/jwt`'s `expiresIn` — типы TS не совпадают с рантайм-удобными строками** (`'15m'`, `argon2id` enum) без явного `as const`/`as JwtSignOptions['expiresIn']` — оба заведомо валидны в рантайме, чисто компилятор придирается к widening типов.
+- **`readline` + пайпленный (не-TTY) stdin: последовательные `rl.question()` теряют строки.** См. ADR-0007 — это единственный баг в Stage 1, который прошёл мимо линта, сборки и юнит-тестов и был пойман только реальным прогоном `create-admin.sh`-подобной команды.
+- Docker-образ `backend`/`worker` в dev-режиме (`nest start --watch`) пишет `dist/` внутрь bind-mount от имени root (контейнер по умолчанию root) — периодически приходилось чистить `dist/`/`node_modules/.vite-temp` через `docker run --rm -v ... alpine rm -rf` перед локальными `npm run build` под своим UID.
+
+### Заметки и грабли (Stage 0, для истории)
+
+- Node/npm недоступны на хосте напрямую — использовался `docker run node:22-alpine` с `-u $(id -u):$(id -g)` и `HOME=/tmp/npm-home`, `npm_config_cache=/tmp/npm-cache` (без этого npm падает с EACCES на `/.npmrc`/`/usr/local/etc`).
+- `mongoose@9` и `@nestjs/*` — их `dist` собран как чистый ESM, Jest (CommonJS) падает без `transformIgnorePatterns: ["node_modules/(?!@nestjs/)"]` в jest-конфиге `backend/package.json`.
+- `zod@4` несовместим по peer dependency с `@vee-validate/zod@4.15.1` — во frontend зафиксирован `zod@^3.24.0`.
+- `express-mongo-sanitize@2.2.0` ломает все запросы под Express 5 — заменён собственным мидлваром. См. ADR-0004.
+- Пересоздание контейнера `mongo` без явного `hostname` рвёт replica set. См. ADR-0005.
+- Эта сессия работает напрямую на целевом прод-сервере — домен `portfelika.com` уже готов у пользователя, но nginx-proxy-manager на хосте нет. См. ADR-0006.
+- Прод-сборка фронтенда не проксирует `/api`/`/health` без явных `location` в `nginx.conf` (в отличие от dev, где это делал Vite).

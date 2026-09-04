@@ -39,6 +39,7 @@ set_env_var_if_empty() {
 
 set_env_var_if_empty EMAIL_ENCRYPTION_KEY "$(openssl rand -hex 32)"
 set_env_var_if_empty EMAIL_HASH_PEPPER "$(openssl rand -hex 32)"
+set_env_var_if_empty JWT_ACCESS_SECRET "$(openssl rand -hex 32)"
 
 set -a
 # shellcheck disable=SC1091

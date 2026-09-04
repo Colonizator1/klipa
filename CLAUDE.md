@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) is done — see `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
+`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) and Stage 1 (auth, on branch `stage/01-auth` — not yet merged to `main`, pending manual verification) are done — see `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
 
 Any deviation from `SPEC.md` gets a short ADR in `docs/DECISIONS.md` (context, decision, consequences) — never silently diverge. If the spec's data format doesn't fit a real need, `SPEC.md` is amended first, then the code.
 
@@ -58,6 +58,8 @@ docker compose logs -f backend   # tail one service, either mode
 
 **Migrations** (backend, `migrate-mongo`, directory `backend/migrations/`, config `backend/migrate-mongo-config.cjs`): `npm run migrate:up` / `migrate:down` / `migrate:status` / `migrate:create -- <name>`.
 
+**First admin** (Stage 1, `SPEC.md` D-16): `./scripts/create-admin.sh` — interactive, requires the stack already running. Needs a real TTY (no `-T`); piping answers in works too (`printf "email\npassword\n" | ...`) but see ADR-0007 before touching the script's prompt logic.
+
 **Testing thresholds** (SPEC.md §14, apply from the stage that has something to test): the `engine` module, accrual generator, and XIRR are unit-tested to 90% coverage and validated against hand-computed "golden" portfolios (known TWR/XIRR/FIFO results) on every core change — the primary correctness gate for money math. Services/validators/provider adapters (HTTP mocked) target 70%. Integration tests run against Mongo via testcontainers. E2E (Playwright) covers 8–10 key flows. None of engine/integration/E2E exist yet — they arrive with Stage 3 (engine) onward.
 
 ## Architecture
@@ -75,7 +77,19 @@ Monorepo: `backend/`, `frontend/`, `scripts/`, `docs/`, `design/`. Docker Compos
 - Instruments are looked up by `{ticker, exchange, currency}` — one instrument = one exchange = one currency, no multi-listing (D-07).
 - `prices` will store **raw, unadjusted close prices** on purpose — never split-adjusted — so a corporate action never silently retroactively changes historical returns.
 
-None of `users`, `portfolios`, `assets`, `operations`, `instruments`, `prices` etc. exist yet — they land with Stage 1 (`users`) and Stage 2 (`portfolios`/`assets`/`operations`).
+`users` exists (Stage 1). `portfolios`, `assets`, `operations`, `instruments`, `prices` etc. don't yet — they land with Stage 2 onward.
+
+### Auth (implemented, Stage 1)
+
+`backend/src/auth/` + `backend/src/users/`. Access token: JWT HS256, 15 min (`JWT_ACCESS_SECRET`/`JWT_ACCESS_TTL`), verified by `JwtAuthGuard` (stateless — no DB hit per request). Refresh token: an opaque random value, never a JWT — stored only as a SHA-256 hash in `refresh_tokens`, delivered as an httpOnly cookie (`refresh_token`, `path=/api/v1/auth`, `secure` when `NODE_ENV=production`). **Rotation + reuse detection**: every `/auth/refresh` call revokes the presented token and issues a new one in the same `familyId`; presenting an already-revoked token is treated as token theft and revokes the *entire* family, forcing a full re-login — this is exercised in `auth.service.spec.ts` and was verified live end-to-end (`docs/PROGRESS.md` has the actual curl transcript). `AuthGuardsModule` (`auth/guards/`) exists specifically to let `UsersModule`'s `/me` controller use `JwtAuthGuard` without a circular import with `AuthModule` — see that module's docstring before restructuring either module.
+
+Email is never stored or logged in plaintext: `users.emailHash` (HMAC-SHA256 blind index, `BlindIndexService`) is the only queryable field, `emailEnc` (AES-256-GCM, `EmailCryptoService`) is decrypted only to build `/me`'s response or an outgoing email. `email_tokens` (verify/reset, 24h/1h TTL, one-time via `usedAt`) store only a SHA-256 `tokenHash`, never the raw token — the raw value only ever exists in the URL sent by email. Password hashing is argon2id at `SPEC.md`'s exact params (`PasswordService`, memoryCost 64MB, timeCost 3).
+
+Mail (`backend/src/mail/`) is one interface (`MailDriver.send`), two drivers: `LogMailDriver` (default — prints to the backend log, zero external services, matches Stage 1's DoD) and `SmtpMailDriver` (nodemailer; mailhog in the dev overlay, a real relay from Stage 11 — same driver, different env). Switch with `MAIL_DRIVER=log|smtp`.
+
+Rate limiting (`common/rate-limit/`) is a hand-rolled Redis fixed-window counter, not `@nestjs/throttler` — SPEC.md §10 needs independent per-IP *and* per-account keys (e.g. login: `login:ip:<ip>` and `login:acct:<emailHash>`, both 5/min), which doesn't map cleanly onto throttler's IP-centric model.
+
+`scripts/create-admin.ts` (wrapped by `scripts/create-admin.sh`) creates the first admin by running against the app's real DI container (`NestFactory.createApplicationContext`), so it reuses the exact same hashing/encryption — never duplicate that logic in a standalone script. If you ever add another interactive prompt to a CLI script like this, read ADR-0007 first: sequential `readline.question()` calls silently drop input under piped/non-TTY stdin (exactly how this script is actually invoked) — use the async-iterator protocol instead, and end with an explicit `process.exit()`.
 
 ### Backend request/error shape (implemented, Stage 0)
 

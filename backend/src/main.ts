@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { mongoSanitize } from './common/security/mongo-sanitize.middleware';
@@ -24,6 +25,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
   app.use(mongoSanitize());
+  app.use(cookieParser());
   app.enableCors({
     origin: configService.get('corsOrigins', { infer: true }),
     credentials: true,
