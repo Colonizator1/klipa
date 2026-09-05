@@ -24,6 +24,11 @@ async function onLogout(): Promise<void> {
       <RouterLink to="/" class="app-title">{{ t('app.title') }}</RouterLink>
       <nav class="app-nav">
         <template v-if="auth.isAuthenticated">
+          <RouterLink to="/assets" class="nav-link">{{ t('nav.assets') }}</RouterLink>
+          <RouterLink to="/operations" class="nav-link">{{ t('nav.operations') }}</RouterLink>
+          <RouterLink v-if="auth.user?.role === 'admin'" to="/admin/fx-rates" class="nav-link">
+            {{ t('nav.admin') }}
+          </RouterLink>
           <RouterLink to="/profile" class="nav-link">{{ t('nav.profile') }}</RouterLink>
           <button type="button" class="nav-link nav-button" @click="onLogout">{{ t('nav.logout') }}</button>
         </template>

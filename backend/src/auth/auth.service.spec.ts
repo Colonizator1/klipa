@@ -97,6 +97,9 @@ describe('AuthService', () => {
       ),
     };
 
+    const portfoliosService = {
+      createDefault: jest.fn(() => Promise.resolve({})),
+    };
     const rateLimit = { consume: jest.fn(() => Promise.resolve()) };
     const blindIndex = { hash: jest.fn((v: string) => `hash(${v})`) };
     const jwtService = {
@@ -121,6 +124,7 @@ describe('AuthService', () => {
         sendVerificationEmail: jest.fn(),
         sendPasswordResetEmail: jest.fn(),
       } as never,
+      portfoliosService as never,
       rateLimit as never,
       jwtService,
       configService,

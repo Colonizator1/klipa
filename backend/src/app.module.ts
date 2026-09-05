@@ -8,6 +8,12 @@ import { validate } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { PortfoliosModule } from './portfolios/portfolios.module';
+import { AssetsModule } from './assets/assets.module';
+import { OperationsModule } from './operations/operations.module';
+import { CustodyPlacesModule } from './custody-places/custody-places.module';
+import { FxRatesModule } from './fx-rates/fx-rates.module';
+import { DictionariesModule } from './dictionaries/dictionaries.module';
 import type { AppConfig } from './config/configuration';
 
 @Module({
@@ -37,6 +43,12 @@ import type { AppConfig } from './config/configuration';
     HealthModule,
     UsersModule,
     AuthModule,
+    PortfoliosModule,
+    CustodyPlacesModule,
+    AssetsModule,
+    OperationsModule,
+    FxRatesModule,
+    DictionariesModule,
   ],
 })
 export class AppModule {}

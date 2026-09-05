@@ -18,6 +18,7 @@ import { EmailCryptoService } from '../common/crypto/email-crypto.service';
 import { PasswordService } from '../common/crypto/password.service';
 import { RateLimitService } from '../common/rate-limit/rate-limit.service';
 import { MailService } from '../mail/mail.service';
+import { PortfoliosService } from '../portfolios/portfolios.service';
 import type {
   UserDocument,
   UserLocale,
@@ -73,6 +74,7 @@ export class AuthService {
     private readonly blindIndex: BlindIndexService,
     private readonly emailCrypto: EmailCryptoService,
     private readonly mailService: MailService,
+    private readonly portfoliosService: PortfoliosService,
     private readonly rateLimit: RateLimitService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<AppConfig, true>,
@@ -106,6 +108,9 @@ export class AuthService {
       locale,
       status: requireVerification ? 'pending' : 'active',
     });
+
+    // SPEC.md §12 Stage 2: "portfolios (создаётся вместе с пользователем)".
+    await this.portfoliosService.createDefault(user._id, locale);
 
     await this.issueEmailToken(
       user,

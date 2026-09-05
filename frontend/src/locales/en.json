@@ -4,6 +4,9 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "assets": "Assets",
+    "operations": "Operations",
+    "admin": "Admin",
     "profile": "Profile",
     "login": "Log in",
     "logout": "Log out"
@@ -17,6 +20,15 @@
     "checking": "Checking server connection…",
     "ok": "Server is reachable",
     "error": "Server is unreachable"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "back": "Back",
+    "open": "Open"
   },
   "auth": {
     "email": "Email",
@@ -66,6 +78,107 @@
     "emailVerified": "Email verified",
     "emailNotVerified": "Email not verified"
   },
+  "assets": {
+    "title": "Assets",
+    "add": "Add asset",
+    "addTitle": "New asset",
+    "editTitle": "Edit asset",
+    "empty": "No assets yet. Add a deposit, cash, or a property to get started.",
+    "name": "Name",
+    "type": "Type",
+    "currency": "Currency",
+    "custody": "Where stored",
+    "status": "Status",
+    "notes": "Notes",
+    "delete": "Delete asset",
+    "hasCustody": "Track where this is stored",
+    "custodyCountry": "Country",
+    "custodyHolder": "Holder (bank, broker, address…)",
+    "hasIncome": "Pays regular income",
+    "incomeType": "Income type",
+    "rateType": "Rate type",
+    "rate": "Rate",
+    "taxRate": "Tax rate, %",
+    "periodCount": "Every",
+    "periodUnit": "Period",
+    "endOfMonth": "Always accrue on the last day of the month",
+    "firstAccrualDate": "First accrual date",
+    "maturityDate": "Maturity date",
+    "reinvest": "Reinvest (compound interest)",
+    "toCash": "Pay straight into the wallet",
+    "autoPost": "Post accruals automatically",
+    "incomeAutomationNote": "Automatic accrual generation arrives in a later stage — for now these settings are only saved.",
+    "types": {
+      "deposit": "Deposit",
+      "bond": "Bond",
+      "cash": "Cash",
+      "realty": "Real estate",
+      "other": "Other"
+    },
+    "statuses": {
+      "open": "Open",
+      "closed": "Closed",
+      "matured": "Matured"
+    },
+    "incomeTypes": {
+      "interest": "Interest",
+      "coupon": "Coupon",
+      "dividend": "Dividend",
+      "rent": "Rent"
+    },
+    "rateTypes": {
+      "percent_annual": "% per annum",
+      "fixed_amount": "Fixed amount"
+    },
+    "periodUnits": {
+      "week": "week(s)",
+      "month": "month(s)",
+      "year": "year(s)"
+    }
+  },
+  "operations": {
+    "title": "Operations",
+    "add": "Add operation",
+    "empty": "No operations yet.",
+    "asset": "Asset",
+    "date": "Date",
+    "type": "Type",
+    "quantity": "Quantity",
+    "price": "Price",
+    "amount": "Amount",
+    "currency": "Currency",
+    "fee": "Fee",
+    "feeCurrency": "Fee currency",
+    "sameAsCurrency": "Same as operation currency",
+    "useCash": "Through the wallet",
+    "tax": "Tax withheld",
+    "taxCurrency": "Tax currency",
+    "notes": "Notes",
+    "filterAsset": "Asset",
+    "filterType": "Type",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "allAssets": "All assets",
+    "allTypes": "All types",
+    "types": {
+      "BUY": "Buy",
+      "SELL": "Sell",
+      "INCOME": "Income",
+      "FEE": "Fee",
+      "REVALUATION": "Revaluation",
+      "PRINCIPAL_IN": "Deposit top-up"
+    }
+  },
+  "admin": {
+    "fxRates": {
+      "title": "Exchange rates",
+      "base": "Base currency",
+      "quote": "Quote currency",
+      "date": "Date",
+      "rate": "Rate",
+      "empty": "No rates entered yet."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Incorrect email or password.",
     "EMAIL_ALREADY_REGISTERED": "This email is already registered.",
@@ -74,6 +187,12 @@
     "RATE_LIMITED": "Too many attempts. Try again later.",
     "INVALID_OR_EXPIRED_TOKEN": "This link is invalid or has expired.",
     "REFRESH_TOKEN_REUSED": "Session ended for security reasons. Please log in again.",
+    "PORTFOLIO_NOT_FOUND": "Portfolio not found.",
+    "ASSET_NOT_FOUND": "Asset not found.",
+    "OPERATION_NOT_FOUND": "Operation not found.",
+    "OPERATION_FIELD_REQUIRED": "A required field is missing for this operation type.",
+    "FX_RATE_ALREADY_EXISTS": "A rate for this pair and date already exists.",
+    "FORBIDDEN_ROLE": "You don't have access to this section.",
     "UNKNOWN": "Something went wrong. Please try again."
   }
 }

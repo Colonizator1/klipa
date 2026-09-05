@@ -9,6 +9,12 @@ const KNOWN_CODES = new Set([
   'RATE_LIMITED',
   'INVALID_OR_EXPIRED_TOKEN',
   'REFRESH_TOKEN_REUSED',
+  'PORTFOLIO_NOT_FOUND',
+  'ASSET_NOT_FOUND',
+  'OPERATION_NOT_FOUND',
+  'OPERATION_FIELD_REQUIRED',
+  'FX_RATE_ALREADY_EXISTS',
+  'FORBIDDEN_ROLE',
 ]);
 
 export function apiErrorI18nKey(error: unknown): string {

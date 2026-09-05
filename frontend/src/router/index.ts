@@ -44,6 +44,36 @@ const router = createRouter({
       component: () => import('../views/ProfileView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/assets',
+      name: 'assets',
+      component: () => import('../views/AssetsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/assets/new',
+      name: 'asset-new',
+      component: () => import('../views/AssetFormView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/assets/:id',
+      name: 'asset-edit',
+      component: () => import('../views/AssetFormView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/operations',
+      name: 'operations',
+      component: () => import('../views/OperationsView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin/fx-rates',
+      name: 'admin-fx-rates',
+      component: () => import('../views/admin/FxRatesView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
   ],
 });
 
@@ -53,6 +83,9 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } };
+  }
+  if (to.meta.requiresAdmin && auth.user?.role !== 'admin') {
+    return { name: 'dashboard' };
   }
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: 'dashboard' };

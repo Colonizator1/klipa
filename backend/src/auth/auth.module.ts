@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { CryptoModule } from '../common/crypto/crypto.module';
 import { RateLimitModule } from '../common/rate-limit/rate-limit.module';
 import { MailModule } from '../mail/mail.module';
+import { PortfoliosModule } from '../portfolios/portfolios.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -22,6 +23,7 @@ import {
     UsersModule,
     CryptoModule,
     MailModule,
+    PortfoliosModule,
     RateLimitModule,
     JwtSharedModule,
   ],

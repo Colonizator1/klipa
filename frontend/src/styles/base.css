@@ -119,3 +119,161 @@ h3 {
   color: var(--positive);
   font-size: var(--fs-sm);
 }
+
+/* Shared list/form primitives — assets, operations, admin fx-rates (Stage 2). */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  max-width: 960px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-20);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14);
+}
+
+.card label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.card input,
+.card select,
+.card textarea {
+  font: inherit;
+  font-size: var(--fs-base);
+  padding: var(--space-10) var(--space-12);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.card input:focus-visible,
+.card select:focus-visible,
+.card textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
+}
+
+.checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--space-8) !important;
+}
+
+.checkbox-row input {
+  padding: 0;
+  width: auto;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-14);
+}
+
+.button {
+  font: inherit;
+  font-weight: var(--fw-medium);
+  padding: var(--space-10) var(--space-16);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.button-danger {
+  background: var(--surface-2);
+  color: var(--negative);
+  border: 1px solid var(--negative);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: var(--space-10) var(--space-12);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.data-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.data-table .row-actions {
+  display: flex;
+  gap: var(--space-8);
+  justify-content: flex-end;
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  padding: var(--space-16) 0;
+}
+
+.badge {
+  display: inline-flex;
+  padding: var(--space-4) var(--space-10);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}

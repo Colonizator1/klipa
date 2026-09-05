@@ -6,6 +6,7 @@ import { AppModule } from '../app.module';
 import { BlindIndexService } from '../common/crypto/blind-index.service';
 import { EmailCryptoService } from '../common/crypto/email-crypto.service';
 import { PasswordService } from '../common/crypto/password.service';
+import { PortfoliosService } from '../portfolios/portfolios.service';
 import { UsersService } from '../users/users.service';
 
 // SPEC.md D-16: the first admin is created out-of-band, not through the
@@ -44,6 +45,7 @@ async function main(): Promise<void> {
     const blindIndex = app.get(BlindIndexService);
     const emailCrypto = app.get(EmailCryptoService);
     const passwordService = app.get(PasswordService);
+    const portfoliosService = app.get(PortfoliosService);
 
     const rawEmail = await prompt('Admin email: ');
     const password = await prompt('Admin password (min 8 chars): ');
@@ -82,6 +84,7 @@ async function main(): Promise<void> {
       role: 'admin',
     });
     await usersService.markEmailVerified(user._id);
+    await portfoliosService.createDefault(user._id, user.locale);
 
     console.log(`Admin user created: ${email}`);
   } finally {
