@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) and Stage 1 (auth) are done and merged to `main` — see `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
+`SPEC.md` is the **single source of truth** for requirements (written in Russian). Stage 0 (scaffold) and Stage 1 (auth) are done and merged to `main`. Stage 2 (portfolio, custom assets, operations) is done on branch `stage/02-portfolio`, deployed for manual verification, not yet merged. See `docs/PROGRESS.md` for exactly what exists and what's next, and `docs/DECISIONS.md` for ADRs on anything that filled a gap `SPEC.md` left open. Read both, in full, before writing code.
 
 Any deviation from `SPEC.md` gets a short ADR in `docs/DECISIONS.md` (context, decision, consequences) — never silently diverge. If the spec's data format doesn't fit a real need, `SPEC.md` is amended first, then the code.
 
@@ -54,7 +54,7 @@ docker compose -f docker-compose.yml up -d --build
 docker compose logs -f backend   # tail one service, either mode
 ```
 
-**This machine runs the prod mode** (`docker-compose.yml` alone, `NODE_ENV=production`, `DOMAIN=portfelika.com` in `.env`) — it's the actual target server, not a dev sandbox. `frontend` currently publishes `80:80` directly as a stopgap (ADR-0006) because there's no nginx-proxy-manager attached to `npm_network` on this host yet; once there is, remove that `ports:` block. Backend/mongo/redis are reachable only from inside the compose network either way — use `docker compose exec <service> ...` / `docker compose logs <service>`. `frontend/nginx.conf` proxies `/api/` and `/health` to `backend:3000` in prod mode (Vite's dev-server proxy only exists in the dev overlay) — don't assume `curl localhost/health` reaching JSON means the SPA fallback route (`location /`) is also correct; they're separate `location` blocks.
+**This machine runs the prod mode** (`docker-compose.yml` alone, `NODE_ENV=production`, `DOMAIN=portfelika.com` in `.env`) — it's the actual target server, not a dev sandbox. `frontend` currently publishes `80:80` directly as a stopgap (ADR-0006) because there's no nginx-proxy-manager attached to `npm_network` on this host yet; once there is, remove that `ports:` block. Backend/mongo/redis are reachable only from inside the compose network either way — use `docker compose exec <service> ...` / `docker compose logs <service>`. `frontend/nginx.conf` proxies `/api/` and `/health` to `backend:3000` in prod mode (Vite's dev-server proxy only exists in the dev overlay) — don't assume `curl localhost/health` reaching JSON means the SPA fallback route (`location /`) is also correct; they're separate `location` blocks. Vite's build output lives at `dist/build-assets/` (`vite.config.ts`'s `build.assetsDir`, `nginx.conf`'s `location /build-assets/`), deliberately **not** the default `dist/assets/` — that would prefix-collide with the app's own `/assets`/`/assets/:id` routes and get intercepted by nginx before ever reaching the SPA fallback (ADR-0010). Never add a new frontend route or a new nginx `location` without checking it doesn't shadow the other.
 
 **Migrations** (backend, `migrate-mongo`, directory `backend/migrations/`, config `backend/migrate-mongo-config.cjs`): `npm run migrate:up` / `migrate:down` / `migrate:status` / `migrate:create -- <name>`.
 
@@ -71,13 +71,15 @@ Monorepo: `backend/`, `frontend/`, `scripts/`, `docs/`, `design/`. Docker Compos
 ### Data model (MongoDB) — core invariants
 
 - **All money and quantities are `Decimal128`**, wrapped in `Money`/`Qty` (`backend/src/common/money/`, built on `decimal.js`, precision 20 / half-up, `toJSON()` → string). `Number`/`float` for money is forbidden at every layer; `local/no-number-money` (`eslint-rules/no-number-money.cjs`, shared by both `eslint.config.mjs`s) flags `: number` on money-shaped identifier names as a heuristic backstop — see ADR-0002 for its limits. The actual guarantee is "the only sanctioned way to hold a monetary/quantity value is `Money`/`Qty`," not the lint rule.
-- **Operation dates are dates-without-time** (UTC midnight) to sidestep timezone issues in accrual scheduling. Same-day ordering is by an explicit `seq` field — FIFO would otherwise be non-deterministic.
+- **Operation dates are dates-without-time** (UTC midnight) to sidestep timezone issues in accrual scheduling. Same-day ordering is by an explicit `seq` field, assigned server-side (`max(seq for portfolioId+date) + 1`) — FIFO would otherwise be non-deterministic.
 - Deletion is soft (`deletedAt`) everywhere except account deletion.
-- `operations` will be the **single source of truth** once it exists (Stage 2). Everything derived from it (`lots`, `snapshots`, portfolio totals) is a rebuildable cache, never hand-edited.
+- `operations` (Stage 2) is the **single source of truth**. Everything derived from it (`lots`, `snapshots`, portfolio totals — Stage 3) is a rebuildable cache, never hand-edited.
 - Instruments are looked up by `{ticker, exchange, currency}` — one instrument = one exchange = one currency, no multi-listing (D-07).
 - `prices` will store **raw, unadjusted close prices** on purpose — never split-adjusted — so a corporate action never silently retroactively changes historical returns.
+- **Every Mongoose `@Prop()` needs an explicit `type:` whenever the field's TS type is a union** (an enum-backed string, or anything with a trailing `| null`) — TypeScript's decorator-metadata emitter collapses unions to `Object`, and `@nestjs/mongoose` then throws `Cannot determine a type for the "<Model>.<field>" field` the moment something imports the schema (not caught by `tsc`/lint). See ADR-0008.
+- **ObjectId ref fields must use `type: SchemaTypes.ObjectId`, never `type: Types.ObjectId`** (both import from `mongoose`, both type-check, only one is real). `Types.ObjectId` isn't a `SchemaType` subclass, so `@nestjs/mongoose` silently degrades the field to `Mixed` — creation still works (a real ObjectId value survives), but `findOne({ someRefField: '<string id>' })` never casts the string and always returns nothing. `Types.ObjectId` is still correct for TS annotations (`userId: Types.ObjectId`) and for constructing values (`new Types.ObjectId(...)`) — only the decorator's `type:` option must use `SchemaTypes`. See ADR-0009.
 
-`users` exists (Stage 1). `portfolios`, `assets`, `operations`, `instruments`, `prices` etc. don't yet — they land with Stage 2 onward.
+`users` (Stage 1), `portfolios`/`assets`/`operations`/`custody_places`/`fx_rates` (Stage 2) exist. `instruments`, `prices`, `lots`, `snapshots`, wallets etc. don't yet — they land with Stage 3 onward.
 
 ### Auth (implemented, Stage 1)
 
@@ -90,6 +92,20 @@ Mail (`backend/src/mail/`) is one interface (`MailDriver.send`), two drivers: `L
 Rate limiting (`common/rate-limit/`) is a hand-rolled Redis fixed-window counter, not `@nestjs/throttler` — SPEC.md §10 needs independent per-IP *and* per-account keys (e.g. login: `login:ip:<ip>` and `login:acct:<emailHash>`, both 5/min), which doesn't map cleanly onto throttler's IP-centric model.
 
 `scripts/create-admin.ts` (wrapped by `scripts/create-admin.sh`) creates the first admin by running against the app's real DI container (`NestFactory.createApplicationContext`), so it reuses the exact same hashing/encryption — never duplicate that logic in a standalone script. If you ever add another interactive prompt to a CLI script like this, read ADR-0007 first: sequential `readline.question()` calls silently drop input under piped/non-TTY stdin (exactly how this script is actually invoked) — use the async-iterator protocol instead, and end with an explicit `process.exit()`.
+
+### Portfolio, custom assets, operations (implemented, Stage 2)
+
+`backend/src/portfolios/`, `backend/src/assets/`, `backend/src/operations/`, `backend/src/custody-places/`, `backend/src/fx-rates/`, `backend/src/dictionaries/`, `backend/src/common/dictionaries/`. No calculation engine yet (Stage 3) — this stage only stores and lists data, per its own DoD ("Расчётов пока нет").
+
+A `Portfolio` is created automatically the moment a `User` is created — `AuthService.register` and `scripts/create-admin.ts` both call `PortfoliosService.createDefault(userId, locale)` right after `UsersService.create`; there is no separate "create my portfolio" step in the UI. `baseCurrency` defaults to `USD`, editable via `PATCH /portfolio` — changing it does **not** trigger a recalc yet (`portfolio.recalcFrom` is never touched in Stage 2; that wiring is Stage 3's, per SPEC.md §5.2).
+
+`Asset.kind` is always `'custom'` in Stage 2 — `'central'` is feature-flagged off until Stage 7 (rejected at the DTO level, not just hidden in the UI). An asset's `custody: {country, holder}` feeds `custody_places` (`CustodyPlacesService.touch`, an upsert-with-`$inc usageCount`) for the "where stored" autocomplete (`GET /dictionaries/custody-places?country=&q=`). An asset's `income` block is saved in full (rate, period, `firstAccrualDate`, `reinvest`, `toCash`, `autoPost`, …) but nothing consumes it yet — no accrual operations are generated automatically until Stage 5. `AssetIncome.anchorDay` is **derived server-side** from `firstAccrualDate.getUTCDate()`, never accepted from the client (SPEC.md §4.7).
+
+`Operation.type` is the full SPEC.md §4.8 enum in the schema (data shape isn't ours to trim, §13 rule 5), but `CreateOperationDto` only accepts `CREATABLE_OPERATION_TYPES` — `BUY`/`SELL` (require `quantity`+`price`; `amount` is always server-derived as `quantity × price`, a client-sent `amount` for these types is silently ignored) and `INCOME`/`FEE`/`REVALUATION`/`PRINCIPAL_IN` (require `amount`). The rest (`TAX`, `MATURITY`, `WALLET_IN`/`WALLET_OUT`, `FX_EXCHANGE`, `SPLIT_ADJUST`) 400 with `OPERATION_FIELD_REQUIRED`-adjacent validation until their owning stage (wallets: 4; accruals/maturity: 5; corporate actions: 10) adds real handling — don't add logic for them ahead of that stage. `seq` (same-day FIFO ordering) and the UTC-midnight `date` normalization both happen server-side in `OperationsService`, never trust client input for either.
+
+`GET /assets/:id/operations` lives in a standalone `AssetOperationsController` inside `OperationsModule`, not as a method on `AssetsController` — this keeps the dependency one-directional (`OperationsModule` → `AssetsModule`, for the asset-existence check on create; never the reverse), the same circular-import-avoidance pattern as `AuthGuardsModule` in Stage 1.
+
+`fx_rates` are entered by hand only (`POST /admin/fx-rates`, `@Roles('admin')`) — D-24/Stage 2 explicitly has no provider yet, upserts by `{base, quote, date}`. `common/dictionaries/currencies.ts` (the 5 D-24 currencies) and `countries.ts` (a static ~55-country en/ru list, no dependency) back the asset/operation currency pickers and the custody country step.
 
 ### Backend request/error shape (implemented, Stage 0)
 

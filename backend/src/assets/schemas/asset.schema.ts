@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import {
   CURRENCIES,
   type Currency,
@@ -99,7 +99,7 @@ export const AssetIncomeSchema = SchemaFactory.createForClass(AssetIncome);
 
 @Schema({ timestamps: true, collection: 'assets' })
 export class Asset {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'Portfolio' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Portfolio' })
   portfolioId: Types.ObjectId;
 
   @Prop({
@@ -112,7 +112,7 @@ export class Asset {
 
   // Central assets land in Stage 7 — feature-flagged off until then, see
   // AssetsService.assertKindAllowed.
-  @Prop({ type: Types.ObjectId, ref: 'Instrument', default: null })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Instrument', default: null })
   instrumentId: Types.ObjectId | null;
 
   @Prop({

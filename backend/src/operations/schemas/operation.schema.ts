@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import {
   CURRENCIES,
   type Currency,
@@ -56,10 +56,10 @@ export type OperationSource = 'manual' | 'auto' | 'import' | 'corporate_action';
 
 @Schema({ timestamps: true, collection: 'operations' })
 export class Operation {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'Portfolio' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Portfolio' })
   portfolioId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, required: true, ref: 'Asset' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Asset' })
   assetId: Types.ObjectId;
 
   // Date-without-time (UTC midnight) — SPEC.md §4: "даты операций — дата без
@@ -121,10 +121,15 @@ export class Operation {
   })
   source: OperationSource;
 
-  @Prop({ type: String, default: null })
-  idempotencyKey: string | null;
+  // No `default: null` on purpose — the unique+sparse index below only
+  // excludes a document from the uniqueness check when the path is truly
+  // absent (undefined), not when it's present and set to `null`. Every
+  // Stage-2 operation is `source: 'manual'` and never sets this field, so it
+  // must stay unset, not defaulted, or a second manual operation 409s.
+  @Prop({ type: String })
+  idempotencyKey?: string | null;
 
-  @Prop({ type: Types.ObjectId, default: null })
+  @Prop({ type: SchemaTypes.ObjectId, default: null })
   generatedFrom: Types.ObjectId | null;
 
   @Prop({ type: String, default: null })

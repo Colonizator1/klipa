@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import {
   CURRENCIES,
   type Currency,
@@ -24,7 +24,12 @@ export const PortfolioSettingsSchema =
 
 @Schema({ timestamps: true, collection: 'portfolios' })
 export class Portfolio {
-  @Prop({ type: Types.ObjectId, required: true, unique: true, ref: 'User' })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    required: true,
+    unique: true,
+    ref: 'User',
+  })
   userId: Types.ObjectId;
 
   @Prop({ required: true })

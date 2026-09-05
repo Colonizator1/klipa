@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 
 /**
  * Rotation + reuse-detection (SPEC.md §10): each refresh issues a new row in
@@ -9,7 +9,7 @@ import { HydratedDocument, Types } from 'mongoose';
  */
 @Schema({ timestamps: true, collection: 'refresh_tokens' })
 export class RefreshToken {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'User' })
   userId: Types.ObjectId;
 
   @Prop({ required: true, unique: true })
@@ -27,7 +27,7 @@ export class RefreshToken {
   @Prop({ type: Date, default: null })
   revokedAt: Date | null;
 
-  @Prop({ type: Types.ObjectId, default: null })
+  @Prop({ type: SchemaTypes.ObjectId, default: null })
   replacedByTokenId: Types.ObjectId | null;
 }
 

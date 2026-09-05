@@ -44,6 +44,40 @@ Rate limits (SPEC.md §10, fixed-window via Redis): login 5/min per IP **and** p
 
 Not yet built: `class-validator` DTO failures fall back to a generic `BAD_REQUEST` code with the raw (English) validator messages in `details` — not localized. Tighten this if it becomes a real UX problem.
 
+### Portfolio, assets, operations (Stage 2)
+
+No calculation engine yet (Stage 3) — these endpoints only store and list data. All are `(Bearer)`, scoped to the caller's own portfolio (1:1 with the user, SPEC.md D-01), auto-created at registration with `baseCurrency: 'USD'` (editable via `PATCH /portfolio`).
+
+```
+GET   /api/v1/portfolio                 → {id, name, baseCurrency, settings, recalcStatus}
+PATCH /api/v1/portfolio  {name?, baseCurrency?, settings?: {defaultUseCash?}}
+
+GET    /api/v1/assets                   → Asset[] (kind: 'custom' only — 'central' is feature-flagged off until Stage 7)
+POST   /api/v1/assets    {type, name, currency, custody?: {country, holder}, income?: {...}, notes?}
+GET    /api/v1/assets/:id
+PATCH  /api/v1/assets/:id  {name?, currency?, custody?, income?, status?, notes?}
+DELETE /api/v1/assets/:id               → 204, soft delete
+GET    /api/v1/assets/:id/operations    → Operation[] for that asset
+
+GET    /api/v1/operations?assetId=&type=&from=&to=
+POST   /api/v1/operations  {assetId, date, type, currency, quantity?, price?, amount?, fee?, feeCurrency?, useCash?, tax?, taxCurrency?, notes?}
+PATCH  /api/v1/operations/:id  (same fields except assetId/type — type is immutable, delete+recreate instead)
+DELETE /api/v1/operations/:id           → 204, soft delete
+
+GET    /api/v1/dictionaries/currencies      → ['USD','EUR','RUB','BYN','PLN'] (D-24)
+GET    /api/v1/dictionaries/countries       → [{code, name: {en, ru}}]
+GET    /api/v1/dictionaries/custody-places?country=&q=  → [{country, holder}], ranked by usage, scoped to the caller
+
+GET  /api/v1/admin/fx-rates?base=&quote=&from=&to=   (Bearer, role=admin)
+POST /api/v1/admin/fx-rates  {base, quote, date, rate}  → upserts by {base, quote, date} (D-24; no providers until Stage 9)
+```
+
+**`type` (creatable in Stage 2):** `BUY`, `SELL` (require `quantity`+`price` — `amount` is server-derived as `quantity × price` and any client-sent `amount` is ignored, SPEC.md §4.8), `INCOME`, `FEE`, `REVALUATION`, `PRINCIPAL_IN` (require `amount`). The other types in SPEC.md's full enum (`TAX`, `MATURITY`, `WALLET_IN`/`WALLET_OUT`, `FX_EXCHANGE`, `SPLIT_ADJUST`) exist in the schema's shape but are rejected by `CreateOperationDto`'s validation until the stage that needs them (wallets: Stage 4; accruals/maturity: Stage 5; corporate actions: Stage 10).
+
+Known `code`s: `PORTFOLIO_NOT_FOUND`, `ASSET_NOT_FOUND`, `OPERATION_NOT_FOUND`, `OPERATION_FIELD_REQUIRED` (`details: {type, field}` — a required field for that operation type was missing), `FX_RATE_ALREADY_EXISTS`, `FORBIDDEN_ROLE` (403, non-admin hitting `/admin/*`).
+
+Not yet built: `GET /portfolio/summary|performance|history|allocation|export`, `POST /assets/:id/recalc-income`, `POST /operations/:id/resolve` (`needs_decision` — Stage 5), `GET /wallets*` (Stage 4).
+
 ## Not implemented yet
 
-`/portfolio/*`, `/assets/*`, `/operations/*`, `/wallets/*`, `/instruments/*`, `/dictionaries/*`, `/notifications/*`, `/admin/*`, `DELETE /me` (account deletion — Stage 12) — arrive with the stage that needs them. See `SPEC.md` §12 and `docs/PROGRESS.md`.
+`/instruments/*`, `/ticker-requests`, `/notifications/*`, the rest of `/admin/*` (users, instruments, prices, corporate-actions, sync-runs, settings, ticker-requests, audit-log), `DELETE /me` (account deletion — Stage 12) — arrive with the stage that needs them. See `SPEC.md` §12 and `docs/PROGRESS.md`.

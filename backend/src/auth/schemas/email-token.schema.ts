@@ -1,11 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 
 export type EmailTokenPurpose = 'verify_email' | 'reset_password';
 
 @Schema({ timestamps: true, collection: 'email_tokens' })
 export class EmailToken {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'User' })
   userId: Types.ObjectId;
 
   /** SPEC.md §4.11 — HMAC blind index of the userId, for admin tooling without exposing the raw id relationship. Not used for lookups (tokenHash already is). */

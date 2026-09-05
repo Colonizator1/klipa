@@ -13,6 +13,12 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // The default 'assets' output dir collides with our own /assets route
+    // (SPEC.md §9 "Активы") once nginx.conf's `location /assets/` cache
+    // block prefix-matches app routes like /assets/<id> — see ADR-0009.
+    assetsDir: 'build-assets',
+  },
   server: {
     // Vite blocks unrecognized Host headers by default (DNS-rebinding guard) —
     // the public domain has to be allow-listed explicitly to be reachable.

@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 
 /** SPEC.md §4.11 — backs the "where stored" holder autocomplete (§9). */
 @Schema({ collection: 'custody_places' })
 export class CustodyPlace {
-  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
+  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'User' })
   userId: Types.ObjectId;
 
   @Prop({ required: true })
